@@ -5,7 +5,7 @@
 #Requirements:
 # * gnupg
 # * nc / netcat
-# * stunclient
+# * stunclient (stuntman-client)
 #
 # TODO:
 # * exchange random key via GnuPG and encrypt using that
@@ -21,19 +21,33 @@ main() {
   imports
 
   PEER="$1"
-  if [ $# -eq 1 ]; then
-    local PORT="`bind_stun`"
-    server "$PORT"
-
-  elif [ $# -eq 2 ]; then
-    /sbin/ifconfig eth0 |
-    grep 'inet addr'
+  if [ $# -eq 2 ]; then
+    /sbin/ifconfig |
+    grep 'inet addr' |
+    grep -vE "\<(127|172)\.[0-9]+\.[0-9]+\.[0-9]"
 
     server "$2"
 
-  elif [ $# -eq 3 ]; then
-    client "$2" "$3"
+  elif [ $# -eq 1 ]; then
+    EXTERNAL="`bind_stun`"
+    local LHOST="`echo "$EXTERNAL" | cut -d : -f 1`"
+    local LPORT="`echo "$EXTERNAL" | cut -d : -f 2`"
 
+    while [ -z "$ADDR" ] || [ "$ADDR" = "$EXTERNAL" ]; do
+      read -p "Please enter the 'Mapped address' of your peer: " ADDR
+    done
+
+    local PHOST="`echo "$ADDR" | cut -d : -f 1`"
+    local PPORT="`echo "$ADDR" | cut -d : -f 2`"
+
+    FIRST="`{ echo $LHOST; echo $PHOST ;}|sort|head -n 1`"
+    if [ "$FIRST" = "$LHOST" ]; then
+#      echo | nc -vvp "$LPORT" -w 1 "$PHOST" "$PPORT"
+      echo | nc -vvup "$LPORT" -w 1 "$PHOST" "$PPORT"
+      server "$LPORT"
+    else
+      client "$LPORT" "$PHOST" "$PPORT"
+    fi
   else
     usage
   fi
@@ -42,20 +56,21 @@ main() {
 server() {
   local PORT="$1"
 
-  NC="nc -vvl $PORT"
+  NC="nc -l $PORT"
   loop
 }
 
 client() {
-  local HOST="$1"
-  local PORT="$2"
+  local LPORT="$1"
+  local HOST="$2"
+  local PORT="$3"
 
-  NC="nc -vv $HOST $PORT"
+  NC="nc -p $LPORT $HOST $PORT"
   loop
 }
 
 loop() {
-  HEARTBEATINTERVAL=10
+  HEARTBEATINTERVAL=30
   {
     msg_greet |
     encode
@@ -67,7 +82,7 @@ loop() {
 
     sleep 1
   } |
-  $NC -q 1 -u |
+  $NC -vv -q 1 -u |
   handle_network
 }
 

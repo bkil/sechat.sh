@@ -17,10 +17,12 @@ bind_stun() {
       exit 1 ##
     else
       local TRYPORT=`expr "$TRYPORT" + 1`
+      printf .
+      sleep 1
     fi
   done
-  echo "info: This is where the remote peer should connect to: $EXTERNAL" >&2
-  echo "$PORT"
+  echo "info: Tell this mapped address to your remote peer: $EXTERNAL" >&2
+  echo "$EXTERNAL"
 }
 
 rebind_stun() {

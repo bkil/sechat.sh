@@ -2,14 +2,13 @@
 
 usage() {
   {
-    echo "client usage: $0 <peer name or fingerprint> <server host> <server port>"
-    echo "server usage: $0 <peer name or fingerprint> <listen port>"
+    echo "usage: $0 <peer name or fingerprint>"
 
-    echo "own private keys:"
+    echo "own private keys: (share public key with 'gpg --armour --export ...id...')"
     gpg --list-secret-keys --fingerprint |
     highlight_gpg_id
 
-    echo "known public keys:"
+    echo "known public keys: (import with 'gpg --import file.gpg; gpg --edit-key ... # trust ultimate')"
     gpg --list-public-keys --fingerprint |
     highlight_gpg_id
   } >&2
